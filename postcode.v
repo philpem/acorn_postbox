@@ -35,22 +35,22 @@ module postcode
 	// Gate internal TESTACK against TESTREQ.
 	// TESTACK should only ever drive high or open.
 	reg testack_int;
-	assign testack = (testreq & testack_int) ? 1'b1 : 1'bZ;
+	assign testack = (testreq & testack_int);
 	
 	
 	// Monostable -- pulse train end detector
 	// Reset to zero every time TESTREQ pulses high.
 	// Stops on expiry.
 	reg[7:0] timer;
-	wire timer_expired = (timer >= TIMER_MAX);
+	wire timer_expired = (timer == TIMER_MAX);
 	
 	always @(posedge refclk or posedge testreq) begin
 		if (testreq) begin
 			// TESTREQ pulse resets the timer
 			timer <= 8'b0;
 		end else begin
-			// REFCLK pulse 
-			if (!timer_expired) begin
+			// REFCLK pulse increments the timer
+			if (timer <= TIMER_MAX) begin
 				timer <= timer + 8'd1;
 			end
 		end
@@ -130,13 +130,21 @@ module postcode
 			rxshift <= {rxshift[6:0], 1'b0};
 		end
 	end
+
+	// Generate delayed timer_expired
+	reg timer_expired_d;
+	always @(posedge refclk) begin
+		timer_expired_d <= timer_expired;
+	end
 	
-	always @(posedge testreq or posedge timer_expired) begin
+	always @(posedge testreq or posedge timer_expired_d) begin
 	
 		// TODO: Shift logic should only work if there's been an OUTPUT?
 
-		if (timer_expired) begin		
-			// Any timer expiry resets the state machine
+		if (timer_expired_d) begin
+			// A timer expiry resets the state machine one EXTCLK after
+			// timer_expired. This gives the shifter logic above a chance
+			// to latch the incoming data bit.
 			state <= S_INITIAL;
 		end else begin
 		
@@ -196,8 +204,9 @@ module postcode
 											testack_int <= 1'b0;
 											state <= S_INPUTPOLL;
 										end else begin
-											// Data available, send ack followed by eight data bits
+											// Data available, send ack, latch data, then shift
 											testack_int <= 1'b1;
+											txshift <= txin;
 											state <= S_INPUT_BIT7;
 										end
 									end
@@ -206,6 +215,9 @@ module postcode
 										// 4+ pulses. INPUT poll.
 										// The fourth pulse is repeated until TESTACK is asserted in response.
 										// After TESTACK is asserted, shift the next bit.
+
+										// Load the shift register
+										txshift <= txin;
 										
 										// Was the last pollbit we sent a '1'?
 										if (!testack_int) begin
@@ -214,7 +226,6 @@ module postcode
 											state <= S_INPUTPOLL;
 										end else begin
 											// Latch the transmit data and send the ACK
-											txshift <= txin;
 											testack_int <= txin[7];
 											state <= S_INPUT_BIT7;
 										end

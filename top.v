@@ -35,11 +35,14 @@ output _PGND2
   assign DIL_26 = lcd_dq[2];
   assign DIL_25 = lcd_dq[1];
   assign DIL_24 = lcd_dq[0];
-  
+
+  wire testack_int;
+  assign DIL_3 = testack_int ? 1'b1 : 1'bZ;		// Only allow TESTACK to drive high or float
+
   postcode p(
 			DIL_1_GCK,		// refclk
 			DIL_2_GCK,		// testreq
-			DIL_3,			// testack
+			testack_int,	// testack
 			
 			lcd_dq,			// D4..7
 			DIL_23,			// RS
