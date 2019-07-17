@@ -197,18 +197,9 @@ module postcode
 										//
 										
 										// The 4th pulse indicates the host wants to start an INPUT cycle and wants to know if we're ready.
-										// 
-									
-										if (!tx_ready) begin
-											// No data available, spin in S_INPUTPOLL until there is (or we time out)
-											testack_int <= 1'b0;
-											state <= S_INPUTPOLL;
-										end else begin
-											// Data available, send ack, latch data, then shift
-											testack_int <= 1'b1;
-											txshift <= txin;
-											state <= S_INPUT_BIT7;
-										end
+										// Send the TX Ready flag then go to S_INPUTPOLL
+										testack_int <= tx_ready;
+										state <= S_INPUTPOLL;
 									end
 									
 				S_INPUTPOLL:	begin
