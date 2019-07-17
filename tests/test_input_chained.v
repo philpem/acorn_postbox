@@ -94,10 +94,6 @@ module test;
 	initial sr = 0;
 	always @(posedge testreq) #5 sr <= {sr[6:0], testack};
 
-	integer reqcount;
-	initial reqcount = 0;
-	always @(posedge testreq) reqcount = reqcount + 1;
-
 	initial begin
 		// Startup delay
 		#(25*USEC)
@@ -107,7 +103,6 @@ module test;
 
 		// Four pulses for INPUT, lastAck will NACK because txpend = 0
 		pulse(4);
-		$display("lastAck = %d...", lastAck);
 		if (lastAck != 1'b0) begin
 			$display("*** DUT ERROR at t=%d. DUT Acked an INPUT when txpend = 0", $time);
 			$finish;

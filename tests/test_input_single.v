@@ -79,11 +79,10 @@ module test;
 		// Four pulses to initialise the FSM to a known state
 		pulsebreak(4);
 
-		// Four pulses for INPUT, lastAck will NACK because 
+		// Four pulses for INPUT, lastAck will NACK because txpend=0
 		pulse(4);
-		$display("lastAck = %d...", lastAck);
 		if (lastAck != 1'b0) begin
-			$display("*** DUT ERROR at t=%d. DUT Acked an INPUT when txpend = 0", $time);
+			$display("*** DUT ERROR at t=%d. DUT Acked an INPUT with txpend = 0", $time);
 			$finish;
 		end
 
@@ -104,11 +103,13 @@ module test;
 		end
 		#BREAK;			// break to clear the FSM down
 
-		$display("lastAck = %d, x = %d", lastAck, x);
+		//$display("lastAck = %d, x = %d", lastAck, x);
 		if (sr != 8'h5A) begin
 			$display("*** DUT ERROR at t=%d. INPUT phase, data mismatch. Got 0x%02X, wanted 0x%02X", $time, sr, txin);
 			$finish;
 		end
+
+		$display("<OK>  Chained input test completed. time=%d", $time);
 
 		#(5*USEC);
 		$finish;

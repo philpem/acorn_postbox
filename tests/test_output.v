@@ -64,7 +64,6 @@ module test;
 
 
 	// Testbench
-	reg oRdy;
 	initial begin
 		// Startup delay
 		#25
@@ -75,8 +74,8 @@ module test;
 		// Three pulses for OUTPUT
 		pulsebreak(3);
 
-		$display($time, "<< sent OUTPUT req, READY=%d >>", oRdy);
-		if (oRdy != 1'b1) begin
+		$display($time, "<< sent OUTPUT req, lastAck=%d >>", lastAck);
+		if (lastAck != 1'b1) begin
 			$display("*** DUT ERROR at time %d. Output-ready was not received when expected.", $time);
 			#5 $finish;
 		end
@@ -102,7 +101,9 @@ module test;
 			$finish;
 		end
 
+		$display("<OK>  Output test completed. reqcount=%d, time=%d", reqcount, $time);
 
+		#(5*USEC);
 		$finish;
 	end
 

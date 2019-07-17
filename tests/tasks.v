@@ -60,4 +60,9 @@ always @(posedge testreq) begin
 	#10 lastAck = (testack == 1'b1) ? 1'b1 : 1'b0;
 end
 
+// Track the number of TESTREQ pulses
+integer reqcount;
+initial reqcount = 0;
+always @(posedge testreq) reqcount = reqcount + 1;
+
 
