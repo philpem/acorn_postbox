@@ -16,17 +16,19 @@ module postcode
 )
 
 (
-	// Input Ports
+	// Clock inputs
 	input refclk,							// Main reference clock (TTL osc)
-	input testreq,							// Test REQuest (LA23)
 	
-	// Output Ports
+	// Test interface
+	input testreq,							// Test REQuest (LA23)
 	output testack,						// Test ACKnowledge (TESTAK)
 	
-	output[3:0] lcd_data,				// LCD display interface
-	output lcd_rs,
-	output lcd_e,
+	// Data received from host (OUTPUT)
+	output [7:0] rxout,					// Received data
+	input rxready,							// 1 if interface is ready for more data
+	output rxstrobe,						// Pulses high when a byte is ready in rxout
 	
+	// Data to send to host
 	input [7:0] txin,						// Data -> host (INPUT command)
 	input tx_pending						// Data to host pending
 );
@@ -81,7 +83,9 @@ module postcode
 	
 	// receive shift register -- data from the host
 	reg[7:0] rxshift;
-	wire rx_ready = 1'b1;
+	wire rx_ready = rxready;
+	assign rxout = rxshift;
+	assign rxstrobe = tx_done;
 	
 	// transmit shift register -- data to the host
 	reg[7:0] txshift;
@@ -90,12 +94,7 @@ module postcode
 	assign tx_done = (state == S_INPUT_BIT0) & testreq;
 
 	
-	// LCD interface on the rxshiftreg
-	assign lcd_data = rxshift[7:4];
-	assign lcd_rs = rxshift[3];
-	// Bits 2 and 1 of the shifted data aren't used
-	// E-strobe is generated when a WRITE is followed by a READ, and rx'd MSB is set.
-	assign lcd_e = (!rxshift[0]) & tx_done;
+
 	
 	
 	

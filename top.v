@@ -31,28 +31,79 @@ output _PGND2
   assign DIL_2 = 1'bZ;
   
   wire[3:0] lcd_dq;
+  wire lcd_rs, lcd_e;
   assign DIL_27 = lcd_dq[3];
   assign DIL_26 = lcd_dq[2];
   assign DIL_25 = lcd_dq[1];
   assign DIL_24 = lcd_dq[0];
+  assign DIL_23 = lcd_rs;
+  assign DIL_22 = lcd_e;
 
   wire testack_int;
   assign DIL_3 = testack_int ? 1'b1 : 1'bZ;		// Only allow TESTACK to drive high or float
 
+  wire [7:0] rxdata;
+  wire rxready;
+  wire rxstrobe;
+  
   postcode p(
-			DIL_1_GCK,		// refclk
-			DIL_2_GCK,		// testreq
-			testack_int,	// testack
+			.refclk(DIL_1_GCK),		// refclk
+			.testreq(DIL_2_GCK),		// testreq
+			.testack(testack_int),	// testack
 			
-			lcd_dq,			// D4..7
-			DIL_23,			// RS
-			DIL_22,			// E
+			.rxout(rxdata),			// received data
+			.rxready(rxready),		// receive ready (1=ready)
+			.rxstrobe(rxstrobe),		// receive strobe (1=data in rxout)
 			
-			8'd0,				// TX data in (for INPUT command) -- 0 indicates a display
-			1'b1				// TX data pending
+			.txin(8'd0),				// TX data in (for INPUT command) -- 0 indicates a display
+			.tx_pending(1'b1)			// TX data pending
 			);
 			
 	// Ref clock is 12MHz, tweak the timer for this
 	defparam p.TIMER_MAX = (15*12)-1;		// 15us timeout, 12MHz clock
 
+	
+	// Latch the data from the shift register and extend the E signal
+	
+	reg[7:0] rxlatch;
+	reg lcd_e_long;
+	wire lcd_e_masked = (!rxdata[0]) & rxstrobe;
+	always @(posedge lcd_e_masked) begin
+		// Latch the LCD data on every E-strobe
+		rxlatch <= rxdata;
+	end
+
+	always @(posedge lcd_e_masked or posedge DIL_2_GCK) begin
+		if (lcd_e_masked) begin
+			// Data received, latch it and set the E-line
+			lcd_e_long <= 1'b1;
+		end else begin
+			// TESTREQ pulse, start of next command. Clear the E-line.
+			lcd_e_long <= 1'b0;
+		end
+	end
+	
+	// Wire up the LCD
+	assign lcd_dq = rxlatch[7:4];			// Data is in the most significant nibble
+	assign lcd_rs = rxlatch[3];				// RS is bit 3
+		// Bits 2 and 1 are unused
+	assign lcd_e = lcd_e_long;
+	
+	
+	// Monostable to generate the 5ms lockout
+	localparam LCD_CMD_TMAX = (5000*12);
+	reg[15:0] lcd_cmd_timer;
+	always @(posedge DIL_1_GCK or posedge lcd_e_long) begin
+		if (lcd_e_long) begin
+			lcd_cmd_timer <= 0;
+		end else begin
+			if (lcd_cmd_timer < LCD_CMD_TMAX) begin
+				lcd_cmd_timer <= lcd_cmd_timer + 16'd1;
+			end
+		end
+	end
+	
+	assign rxready = (lcd_cmd_timer >= LCD_CMD_TMAX);
+
+	
 endmodule
