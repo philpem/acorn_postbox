@@ -17,12 +17,12 @@ testclean:
 
 # Run a test to produce the test results
 tests/%.lxt2:	tests/%
-	vvp $< -lxt2
+	@vvp $< -lxt2
 	@echo
 
 # Build the test using Icarus Verilog
 tests/%:	tests/%.v ${MODULE_V} FORCE
-	iverilog -I./tests -o $@ $< ${MODULE_V}
+	@iverilog -I./tests -o $@ $< ${MODULE_V}
 
 .PHONY: FORCE
 
