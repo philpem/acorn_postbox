@@ -51,5 +51,8 @@ output _PGND2
 			8'd0,				// TX data in (for INPUT command) -- 0 indicates a display
 			1'b1				// TX data pending
 			);
+			
+	// Ref clock is 12MHz, tweak the timer for this
+	defparam p.TIMER_MAX = (15*12)-1;		// 15us timeout, 12MHz clock
 
 endmodule

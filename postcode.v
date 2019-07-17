@@ -55,10 +55,7 @@ module postcode
 			end
 		end
 	end
-	
-	reg rx_shifter[7:0];
-	
-	
+		
 	/**
 	 * INPUT:
 	 *   Four pulses are sent.
@@ -94,10 +91,11 @@ module postcode
 
 	
 	// LCD interface on the rxshiftreg
-	assign lcd_data = rxshift[3:0];
-	assign lcd_rs = rxshift[4];
+	assign lcd_data = rxshift[7:4];
+	assign lcd_rs = rxshift[3];
+	// Bits 2 and 1 of the shifted data aren't used
 	// E-strobe is generated when a WRITE is followed by a READ, and rx'd MSB is set.
-	assign lcd_e = (!rxshift[7]) & tx_done;
+	assign lcd_e = (!rxshift[0]) & tx_done;
 	
 	
 	
@@ -121,13 +119,15 @@ module postcode
 	always @(posedge timer_expired) begin
 		// Timer expiry -- shift in any data bits which were sent
 
-		// Timer expiry in S_SHIFTONE shifts in a '1'
 		if (state == S_SHIFTONE) begin
+			// Timer expiry in S_SHIFTONE shifts in a '1'
 			rxshift <= {rxshift[6:0], 1'b1};
-
-		// Timer expiry in S_SHIFTONE shifts in a '0'
 		end else if (state == S_SHIFTZERO) begin
+			// Timer expiry in S_SHIFTONE shifts in a '0'
 			rxshift <= {rxshift[6:0], 1'b0};
+		end else begin
+			// Otherwise rxshift maintains its current state
+			rxshift <= rxshift;
 		end
 	end
 
