@@ -3,3 +3,7 @@
 *.lxt2
 *.vcd
 
+*.bak
+db/
+incremental_db/
+output_files/
